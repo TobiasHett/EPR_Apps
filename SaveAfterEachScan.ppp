@@ -1,0 +1,66 @@
+# Save after each scan #
+# Automatically save the spectrum or trace after each scan#
+
+program SaveAfterEachScan(int first_scan_to_save increment total_number_of_scans);
+
+pointer		CurExp Dataset nameP;
+int 		i currnosc idx dim[8];
+char		titlestring[100] savestring[100] filepath[100];
+
+
+#-----Input of filepath-----#
+strcpy(filepath, "'/home/xuser/xeprFiles/"); #Make sure to have a "' at the beginning and /" at the end#
+#-----Input of filepath-----#
+
+
+
+
+#-----Actual program: DO NOT EDIT ANYTHING BELOW!!!!-----#
+CurExp = aqGetSelectedExp(-1);
+
+# ensure we found a correct experiment                                  #
+if (CurExp == NIL)
+  printLn("No experiment has been selected for current viewport");
+  printLn("------------------------------------------------------------");
+  return(FALSE);
+endif;
+
+currnosc=aqGetIntParValue(CurExp, "NbScansDone", 8, dim);      #Get number of averages currently done#
+
+idx=first_scan_to_save;
+while (currnosc <= total_number_of_scans)
+	currnosc=aqGetIntParValue(CurExp, "NbScansDone",8,dim); #Get number of averages currently done#
+	if (idx==currnosc)			   		#Check if the current number of scans occurs for the first time (=idx)#
+		Dataset = getCopyOfPrimary;                	#This line gets info from dataset.#
+		strcpy(titlestring,"scan_");			#Create a title for the new dataset#
+		strcat(titlestring, currnosc);			#Complete the title for the new dataset by adding the number of scans#
+		setTitle(Dataset, titlestring);			#Set the new title#
+		i = storeCopyOfDset(Dataset);	  		#If the condition applies, then store the dataset with new name in memory#
+		idx=idx+increment;					#Increment counter#
+		printLn("Dataset stored after ", currnosc, " scans as handle ", i);
+
+
+	#The following commands are for saving the files to HDD#
+		strcpy(savestring, "ddCurrent ");		#Generate command: Choose the dataset#
+		strcat(savestring, i);				#Generate command: Add the handle to the dataset in memory"#
+		execCmd(savestring);				#Execute command: Select the dataset#
+		strcpy(savestring, "ddsave -1 ");		#Generate command: Save dataset#
+		strcat(savestring, filepath);			#Add the file path from above#
+		strcat(savestring, titlestring);		#Add the title of the file#
+		strcat(savestring, "'");			#End the command#
+		execCmd(savestring);				#Execute command: Save the dataset to HDD#
+		printLn("Dataset saved after ", currnosc, " scans as  scan_", currnosc, ".DTA");
+		printLn("-------------------------------------");
+	destroyDset(Dataset);					#Release the memory used by copied dataset before getting the next copy#
+
+ 	endif;
+
+	if (currnosc==total_number_of_scans)			#If all scans are done, end the program by going to the label endprog#
+		goto endprog;
+	endif;
+endwhile;
+
+label endprog;							#Label to jump to if all scans have been finished#
+printLn("Acquisition and saving finished.");
+
+
